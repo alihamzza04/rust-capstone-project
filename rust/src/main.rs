@@ -1,6 +1,6 @@
 #![allow(unused)]
-use bitcoincore_rpc::bitcoin::{Network, Txid};
 use bitcoincore_rpc::bitcoin::Amount;
+use bitcoincore_rpc::bitcoin::{Network, Txid};
 use bitcoincore_rpc::{Auth, Client, RpcApi};
 use serde::Deserialize;
 use serde_json::json;
@@ -19,10 +19,10 @@ const RPC_PASS: &str = "password";
 fn send(rpc: &Client, addr: &str, amount_btc: f64) -> bitcoincore_rpc::Result<String> {
     let args = [
         json!([{addr : amount_btc }]), // recipient address and amount
-        json!(null),            // conf target
-        json!(null),            // estimate mode
-        json!(null),            // fee rate in sats/vb
-        json!(null),            // Empty option object
+        json!(null),                   // conf target
+        json!(null),                   // estimate mode
+        json!(null),                   // fee rate in sats/vb
+        json!(null),                   // Empty option object
     ];
 
     #[derive(Deserialize)]
@@ -84,7 +84,6 @@ fn main() -> bitcoincore_rpc::Result<()> {
         .expect("Address should be valid for regtest");
     println!("Trader address: {}", trader_address);
 
-
     // Send 20 BTC from Miner to Trader
 
     let txid_str = send(&miner_client, &trader_address.to_string(), 20.0)?;
@@ -110,7 +109,10 @@ fn main() -> bitcoincore_rpc::Result<()> {
     let tx_result = miner_client.get_transaction(&txid, None)?;
     let tx = tx_result.transaction()?;
 
-    let fee_sat = tx_result.fee.map(|f| f.to_sat().unsigned_abs()).unwrap_or(0);
+    let fee_sat = tx_result
+        .fee
+        .map(|f| f.to_sat().unsigned_abs())
+        .unwrap_or(0);
     let fee_btc = fee_sat as f64 / 100_000_000.0;
 
     // Get input address from first input using RPC
@@ -120,7 +122,7 @@ fn main() -> bitcoincore_rpc::Result<()> {
     let input_tx = input_tx_result.transaction()?;
     let input_amount_sat = input_tx.output[input_vout as usize].value.to_sat();
     let input_amount_btc = input_amount_sat as f64 / 100_000_000.0;
-    
+
     // Use RPC call to get decoded transaction with addresses
     #[derive(Deserialize)]
     struct Vin {
@@ -177,7 +179,7 @@ fn main() -> bitcoincore_rpc::Result<()> {
     writeln!(file, "{}", block_height)?;
     writeln!(file, "{}", block_hash)?;
     println!("✓ written to ../out.txt");
-    
+
     Ok(())
 }
 
