@@ -154,7 +154,12 @@ fn main() -> bitcoincore_rpc::Result<()> {
     let mut change_amount_btc = 0.0;
 
     for output in &decoded_tx.vout {
-        let addr = output.scriptPubKey.addresses.clone().and_then(|a| a.into_iter().next()).unwrap_or_default();
+        let addr = output
+            .scriptPubKey
+            .addresses
+            .clone()
+            .and_then(|a| a.into_iter().next())
+            .unwrap_or_default();
         let amount_btc = output.value;
         if addr == trader_address.to_string() {
             trader_output_addr = addr;
