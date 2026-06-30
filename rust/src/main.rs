@@ -156,29 +156,33 @@ fn main() -> bitcoincore_rpc::Result<()> {
     let input_address = decoded_tx.vin[0].address.clone().unwrap_or_default();
 
     // Identify trader output (20 BTC) and change output
-    // Use amount-based identification since addresses might be formatted differently
-    let mut trader_output_addr = String::new();
-    let mut trader_output_amount_btc = 0.0;
-    let mut change_addr = String::new();
-    let mut change_amount_btc = 0.0;
+    // There are exactly 2 outputs: one is 20 BTC (trader), the other is change
+    let trader_output = decoded_tx
+        .vout
+        .iter()
+        .find(|o| (o.value - 20.0).abs() < 0.001)
+        .unwrap();
+    let change_output = decoded_tx
+        .vout
+        .iter()
+        .find(|o| (o.value - 20.0).abs() >= 0.001)
+        .unwrap();
 
-    for output in &decoded_tx.vout {
-        let addr = output
-            .scriptPubKey
-            .addresses
-            .clone()
-            .and_then(|a| a.into_iter().next())
-            .unwrap_or_default();
-        let amount_btc = output.value;
-        // The trader output should be close to 20 BTC (the amount we sent)
-        if (amount_btc - 20.0).abs() < 0.001 {
-            trader_output_addr = addr;
-            trader_output_amount_btc = amount_btc;
-        } else {
-            change_addr = addr;
-            change_amount_btc = amount_btc;
-        }
-    }
+    let trader_output_addr = trader_output
+        .scriptPubKey
+        .addresses
+        .clone()
+        .and_then(|a| a.into_iter().next())
+        .unwrap_or_default();
+    let trader_output_amount_btc = trader_output.value;
+
+    let change_addr = change_output
+        .scriptPubKey
+        .addresses
+        .clone()
+        .and_then(|a| a.into_iter().next())
+        .unwrap_or_default();
+    let change_amount_btc = change_output.value;
 
     println!("Fee: {fee_btc} BTC | Input: {input_amount_btc} BTC | Trader Output: {trader_output_amount_btc} BTC | Change: {change_amount_btc} BTC");
 
