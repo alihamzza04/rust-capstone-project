@@ -132,37 +132,51 @@ fn main() -> bitcoincore_rpc::Result<()> {
     let input_amount_btc = input_amount_sat as f64 / 100_000_000.0;
 
     // Use RPC call to get decoded transaction with addresses
+    // Use gettransaction with verbose mode (same as test) for address consistency
     #[derive(Deserialize)]
-    struct Vin {
+    #[allow(non_snake_case)]
+    struct DecodedVin {
         address: Option<String>,
     }
-    #[allow(non_snake_case)]
     #[derive(Deserialize)]
-    struct ScriptPubKey {
-        addresses: Option<Vec<String>>,
+    #[allow(non_snake_case)]
+    struct DecodedScriptPubKey {
+        address: Option<String>,
     }
-    #[allow(non_snake_case)]
     #[derive(Deserialize)]
-    struct Vout {
+    #[allow(non_snake_case)]
+    struct DecodedVout {
         value: f64,
-        scriptPubKey: ScriptPubKey,
+        scriptPubKey: DecodedScriptPubKey,
     }
     #[derive(Deserialize)]
-    struct DecodedTx {
-        vin: Vec<Vin>,
-        vout: Vec<Vout>,
+    #[allow(non_snake_case)]
+    struct DecodedTransaction {
+        vin: Vec<DecodedVin>,
+        vout: Vec<DecodedVout>,
     }
-    let decoded_tx: DecodedTx = rpc.call("getrawtransaction", &[json!(txid_str), json!(1)])?;
-    let input_address = decoded_tx.vin[0].address.clone().unwrap_or_default();
+    #[derive(Deserialize)]
+    #[allow(non_snake_case)]
+    struct GetTransactionVerbose {
+        decoded: DecodedTransaction,
+    }
+    let tx_verbose: GetTransactionVerbose =
+        miner_client.call("gettransaction", &[json!(txid), json!(null), json!(true)])?;
+    let input_address = tx_verbose.decoded.vin[0]
+        .address
+        .clone()
+        .unwrap_or_default();
 
     // Identify trader output (20 BTC) and change output
     // There are exactly 2 outputs: one is 20 BTC (trader), the other is change
-    let trader_output = decoded_tx
+    let trader_output = tx_verbose
+        .decoded
         .vout
         .iter()
         .find(|o| (o.value - 20.0).abs() < 0.001)
         .unwrap();
-    let change_output = decoded_tx
+    let change_output = tx_verbose
+        .decoded
         .vout
         .iter()
         .find(|o| (o.value - 20.0).abs() >= 0.001)
@@ -170,17 +184,15 @@ fn main() -> bitcoincore_rpc::Result<()> {
 
     let trader_output_addr = trader_output
         .scriptPubKey
-        .addresses
+        .address
         .clone()
-        .and_then(|a| a.into_iter().next())
         .unwrap_or_default();
     let trader_output_amount_btc = trader_output.value;
 
     let change_addr = change_output
         .scriptPubKey
-        .addresses
+        .address
         .clone()
-        .and_then(|a| a.into_iter().next())
         .unwrap_or_default();
     let change_amount_btc = change_output.value;
 
